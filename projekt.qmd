@@ -1,0 +1,14 @@
+---
+title: "Analýza vzťahu nezamestnanosti a rastu HDP v krajinách EÚ-27"
+subtitle: "Aplikácia Okunovho zákona"
+author: "Jakub Anton Svoreň"
+date: today
+format:
+  html:
+    embed-resources: true
+    toc: true
+    toc-expand: true
+    number-sections: true
+    code-fold: true
+    theme: cosmo
+---
