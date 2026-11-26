@@ -49,9 +49,6 @@ Na základe teoretických východísk a cieľa analýzy boli stanovené nasleduj
 
 **H3:** Regularizované modely LASSO/Ridge dosiahnu nižšiu predikčnú chybu RMSE ako klasický lineárny model OLS a naivný model.
 
-
-
-
 # Dáta z API
 
 ## Zdroje údajov
@@ -110,3 +107,40 @@ dim(eu27_data),
 head(eu27_data)
 )
 ```
+
+
+# Upratanie dát
+
+## Štruktúra datasetu a dátové typy
+
+Pred samotnou analýzou bola overená štruktúra výsledného datasetu, jeho formát a dátové typy jednotlivých premenných. Dataset má panelovú štruktúru, v ktorej každé pozorovanie predstavuje jednu krajinu v konkrétnom roku. Identifikáciu pozorovaní zabezpečujú premenné `iso2c` a `year`.
+```{r}
+# Súhrnný prehľad premenných, ich typov a chýbajúcich hodnôt
+kontrola_premennych <- data.frame(
+  dátový_typ = sapply(eu27_data, function(x) class(x)[1]),
+  počet_NA = sapply(eu27_data, function(x) sum(is.na(x)))
+)
+kontrola_premennych
+```
+
+```{r}
+# Kontrola počtu krajín a rokov
+eu27_data %>%
+  summarise(
+    pocet_krajin = n_distinct(iso2c),
+    prvy_rok = min(year),
+    posledny_rok = max(year),
+    pocet_pozorovani = n()
+  )
+
+# Kontrola duplicitných kombinácií krajiny a roku
+duplicity <- eu27_data %>%
+  count(iso2c, year) %>%
+  filter(n > 1)
+
+duplicity
+```
+
+V datasete sa nachádza 27 chýbajúcich hodnôt. Ide o očakávaný dôsledok vytvorenia oneskorenej premennej `gdp_growth_lag1`, 1 chýbajúca hodnota pre každú krajinu v roku 2010, kedze pre tento rok nebolo mozne oneskorenu premenne vypocitat. Chýbajúce hodnoty preto nepredstavujú chybu v pôvodných dátach a neboli dodatočne nahrádzané. Pri analýzach využívajúcich túto premennú sa bude pracovať s 378 dostupnými pozorovaniami. V datasete sa nenachádzajú žiadne duplicitné kombinácie krajiny a roku.
+
+Pred spojením jednotlivých dátových zdrojov bola overená jednoznačnosť kombinácií krajiny a roku (`iso2c`, `year`). Kontrola potvrdila, že žiadny zo štyroch datasetov neobsahuje duplicitné kombinácie týchto kľúčov. Všetky zdrojové datasety tak spĺňajú podmienku jednoznačnosti spojovacích kľúčov.
