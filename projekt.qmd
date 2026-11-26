@@ -11,4 +11,102 @@ format:
     number-sections: true
     code-fold: true
     theme: cosmo
+    
+execute:
+  warning: false
+  message: false
 ---
+
+# Otázka a teoretické východiská
+
+## Cieľ analýzy a výskumná otázka
+
+Cieľom projektu je analyzovať vzťah medzi ekonomickým rastom a mierou nezamestnanosti v krajinách Európskej únie v období rokov 2010 až 2024. Analýza vychádza z Okunovho zákona a skúma, či sa jeho predpokladaný negatívny vzťah medzi rastom HDP a nezamestnanosťou prejavuje aj v krajinách EÚ-27.
+
+Okrem ekonomického rastu sa zameriava aj na ďalšie makroekonomické, demografické a štrukturálne faktory, ktoré môžu súvisieť s vývojom nezamestnanosti.
+
+Výsledky analýzy sú určené pre Ministerstvo práce, sociálnych vecí a rodiny Slovenskej republiky, konkrétne pre Sekciu stratégie a analýz trhu práce.
+
+Hlavná výskumná otázka:
+
+*Aký je vzťah medzi ekonomickým rastom a mierou nezamestnanosti v krajinách EÚ-27 v období 2010–2024 a do akej miery tento vzťah ovplyvňujú ďalšie makroekonomické, demografické a štrukturálne faktory?*
+
+## Teoretické východiská – Okunov zákon
+
+Okunov zákon opisuje empirický negatívny vzťah medzi ekonomickým rastom a nezamestnanosťou. Vychádza z predpokladu, že v období ekonomického rastu podniky zvyšujú svoju produkciu, čo môže viesť k vyššiemu dopytu po pracovnej sile a následnému poklesu nezamestnanosti. Naopak, spomalenie ekonomickej aktivity alebo pokles produkcie môže viesť k znižovaniu zamestnanosti a rastu nezamestnanosti.
+
+Vzťah medzi ekonomickým rastom a nezamestnanosťou nemusí byť okamžitý. Podniky môžu na zmeny ekonomických podmienok reagovať s určitým oneskorením, napríklad v dôsledku nákladov spojených s prijímaním a prepúšťaním zamestnancov. Preto analýza zohľadňuje aj rast HDP v predchádzajúcom roku.
+
+Vývoj nezamestnanosti však nemusí závisieť výlučne od ekonomického rastu. Svoju úlohu môžu zohrávať aj ďalšie charakteristiky ekonomiky, napríklad úroveň vzdelania obyvateľstva, investičná aktivita, štruktúra hospodárstva a demografický vývoj. Z tohto dôvodu projekt rozširuje analýzu Okunovho zákona o ďalšie makroekonomické, demografické a štrukturálne ukazovatele.
+
+## Výskumné hypotézy
+
+Na základe teoretických východísk a cieľa analýzy boli stanovené nasledujúce hypotézy:
+
+**H1:** Rast reálneho HDP má negatívny vzťah k miere nezamestnanosti, pričom tento vzťah sa môže prejavovať v aktuálnom aj predchádzajúcom roku.
+
+**H2:** Podiel obyvateľstva s terciárnym vzdelaním a investičná aktivita majú štatisticky významný vzťah k miere nezamestnanosti.
+
+**H3:** Regularizované modely LASSO/Ridge dosiahnu nižšiu predikčnú chybu RMSE ako klasický lineárny model OLS a naivný model.
+
+
+
+
+# Dáta z API
+
+## Zdroje údajov
+
+V analýze boli použité údaje z dvoch verejných dátových zdrojov. Prvým zdrojom je Eurostat, z ktorého boli získané údaje o miere nezamestnanosti, raste HDP a podiele obyvateľstva s terciárnym vzdelaním. Druhým zdrojom je World Bank, konkrétne databáza World Development Indicators (WDI), z ktorej pochádzajú ďalšie makroekonomické, demografické a štrukturálne ukazovatele.
+
+Údaje boli získané prostredníctvom API pomocou balíkov `eurostat` a `WDI` v programovacom jazyku R. Analýza zahŕňa 27 členských štátov Európskej únie za obdobie rokov 2010 až 2024.
+
+## Použité ukazovatele
+
+V analýze boli použité nasledujúce premenné:
+
+| Premenná v R | Zdroj a kód | Význam |
+|---|---|---|
+| `unemp_rate` | Eurostat: `une_rt_a` | Miera nezamestnanosti vo veku 15–74 rokov (%) |
+| `gdp_growth` | Eurostat: `nama_10_gdp` | Rast reálneho HDP (%) |
+| `gdp_growth_lag1` | Vlastná odvodená premenná | Rast HDP v predchádzajúcom roku (%) |
+| `tertiary_edu` | Eurostat: `edat_lfse_03` | Podiel obyvateľstva vo veku 25–64 rokov s terciárnym vzdelaním (%) |
+| `investment_gdp` | World Bank: `NE.GDI.TOTL.ZS` | Tvorba hrubého kapitálu (% HDP) |
+| `fdi_inflows` | World Bank: `BX.KLT.DINV.WD.GD.ZS` | Čistý prílev priamych zahraničných investícií (% HDP) |
+| `inflation` | World Bank: `FP.CPI.TOTL.ZG` | Ročná miera inflácie (%) |
+| `industry_share` | World Bank: `NV.IND.TOTL.ZS` | Podiel priemyslu vrátane stavebníctva na HDP (%) |
+| `old_dependency` | World Bank: `SP.POP.DPND.OL` | Index závislosti staršieho obyvateľstva (%) |
+| `activity_rate` | World Bank: `SL.TLF.CACT.ZS` | Miera ekonomickej aktivity obyvateľstva vo veku 15+ (%) |
+
+Premenné `iso2c` a `year` slúžia ako identifikačné kľúče na spájanie jednotlivých dátových zdrojov.
+
+## Rozsah a výsledná dátová vzorka
+
+Výsledný dataset obsahuje 405 pozorovaní, ktoré predstavujú kombináciu 27 krajín Európskej únie a 15 rokov sledovaného obdobia (2010–2024). Po spojení údajov z Eurostatu a World Bank vznikol jednotný dataset obsahujúci ekonomické, demografické a štrukturálne ukazovatele.
+
+Údaje boli stiahnuté z Eurostat API a World Bank API dňa 25. novembra 2026.
+
+Pre potreby analýzy oneskoreného vzťahu medzi rastom HDP a nezamestnanosťou bola vytvorená aj premenná `gdp_growth_lag1`, ktorá zachytáva rast HDP v predchádzajúcom roku. Táto premenná obsahuje 27 chýbajúcich hodnôt, keďže pre prvý rok sledovaného obdobia (2010) nie sú k dispozícii údaje za predchádzajúci rok. Pri analýzach využívajúcich túto premennú tak zostáva 378 pozorovaní.
+
+## Načítanie dát v R
+
+Keďže údaje boli stiahnuté a uložené v samostatnom skripte, v analytickej správe pracujeme s uloženou dátovou snímkou. Tento postup zabezpečuje reprodukovateľnosť analýzy a umožňuje jej vykonanie bez opätovného pripojenia k API.
+
+
+
+```{r}
+# Načítanie potrebných knižníc
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+
+# Načítanie dát
+eu27_data <- readRDS(
+  file.path("data", "eu27_nezamestnanost_latest.rds")
+)
+
+# Kontrola dát
+list(
+dim(eu27_data),
+head(eu27_data)
+)
+```
