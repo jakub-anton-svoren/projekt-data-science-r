@@ -141,6 +141,235 @@ duplicity <- eu27_data %>%
 duplicity
 ```
 
-V datasete sa nachádza 27 chýbajúcich hodnôt. Ide o očakávaný dôsledok vytvorenia oneskorenej premennej `gdp_growth_lag1`, 1 chýbajúca hodnota pre každú krajinu v roku 2010, kedze pre tento rok nebolo mozne oneskorenu premenne vypocitat. Chýbajúce hodnoty preto nepredstavujú chybu v pôvodných dátach a neboli dodatočne nahrádzané. Pri analýzach využívajúcich túto premennú sa bude pracovať s 378 dostupnými pozorovaniami. V datasete sa nenachádzajú žiadne duplicitné kombinácie krajiny a roku.
+V datasete sa nachádza 27 chýbajúcich hodnôt. Ide o očakávaný dôsledok vytvorenia oneskorenej premennej gdp_growth_lag1, pričom jedna chýbajúca hodnota pripadá na každú krajinu v roku 2010, keďže pre tento rok nebol k dispozícii údaj o raste HDP v predchádzajúcom roku. Chýbajúce hodnoty preto nepredstavujú chybu v pôvodných dátach a neboli dodatočne nahrádzané. Pri analýzach využívajúcich túto premennú sa bude pracovať s 378 dostupnými pozorovaniami.
 
-Pred spojením jednotlivých dátových zdrojov bola overená jednoznačnosť kombinácií krajiny a roku (`iso2c`, `year`). Kontrola potvrdila, že žiadny zo štyroch datasetov neobsahuje duplicitné kombinácie týchto kľúčov. Všetky zdrojové datasety tak spĺňajú podmienku jednoznačnosti spojovacích kľúčov.
+Kontrola výsledného datasetu zároveň potvrdila, že neobsahuje žiadne duplicitné kombinácie krajiny a roku.
+
+Pred spojením jednotlivých dátových zdrojov bola overená jednoznačnosť kombinácií krajiny a roku (iso2c, year). Kontrola potvrdila, že žiadny zo štyroch datasetov neobsahuje duplicitné kombinácie týchto kľúčov. Všetky zdrojové datasety tak spĺňajú podmienku jednoznačnosti spojovacích kľúčov.
+
+# Exploratívna dátová analýza
+
+Cieľom Exporatívnej dátovej analýzy je získať základný prehľad o sledovaných premenných a ich charakteristikách. Prostredníctvom deskriptívnej štatistiky a grafických vizualizácií skúmame ich rozdelenie, variabilitu, vzájomné vzťahy a prípadné nezvyčajné hodnoty. Osobitná pozornosť je venovaná vzťahu medzi ekonomickým rastom a mierou nezamestnanosti v kontexte Okunovho zákona. Zistenia z tejto časti poslúžia ako podklad pre výber a interpretáciu modelov v ďalšej fáze projektu.
+
+## Deskriptívna štatistika
+
+Na úvod súhrnne opisujeme základné charakteristiky sledovaných premenných pomocou deskriptívnej štatistiky. Sledujeme počet dostupných pozorovaní, priemer, smerodajnú odchýlku, minimum, maximum a kvartily. Tento prehľad poskytuje základnú predstavu o rozdelení a variabilite jednotlivých ukazovateľov.
+
+```{r}
+# Výpočet základných deskriptívnych štatistík
+deskriptivna_statistika <- eu27_data %>%
+  select(
+    unemp_rate,
+    gdp_growth,
+    gdp_growth_lag1,
+    tertiary_edu,
+    investment_gdp,
+    fdi_inflows,
+    inflation,
+    industry_share,
+    old_dependency,
+    activity_rate
+  ) %>%
+  pivot_longer(
+    cols = everything(),
+    names_to = "premenná",
+    values_to = "hodnota"
+  ) %>%
+  group_by(premenná) %>%
+  summarise(
+    počet = sum(!is.na(hodnota)),
+    mean = mean(hodnota, na.rm = TRUE),
+    stdev = sd(hodnota, na.rm = TRUE),
+    min = min(hodnota, na.rm = TRUE),
+    Q1 = quantile(hodnota, 0.25, na.rm = TRUE),
+    medián = median(hodnota, na.rm = TRUE),
+    Q3 = quantile(hodnota, 0.75, na.rm = TRUE),
+    max = max(hodnota, na.rm = TRUE)
+  ) %>%
+  mutate(
+    across(where(is.numeric), ~ round(.x, 2))
+  )
+
+deskriptivna_statistika
+```
+
+Deskriptívna štatistika poukazuje na rozdiely medzi krajinami a rokmi v sledovaných ekonomických a štrukturálnych ukazovateľoch. Nepríklad priemerná miera nezamestnanosti dosahuje 8,35 %, pričom jej smerodajná odchýlka 4,5 percentuálneho bodu naznačuje značnú variabilitu. Priemerný rast HDP predstavuje 2,21 %, no jeho hodnoty sa pohybujú od −10,9 % do 24,6 %, čo poukazuje na výrazné ekonomické výkyvy v sledovanom období. Priemerný podiel terciárne vzdelaného obyvateľstva dosahuje 32,6 % a tvorba hrubého kapitálu predstavuje v priemere 22 % HDP. Premenná prílevu priamych zahraničných investícií vykazuje mimoriadne široký rozsah hodnôt, od −376 % do 452 % HDP, čo naznačuje prítomnosť extrémnych pozorovaní.
+
+## Rozdelenie miery nezamestnanosti
+Ako prvé skúmame rozdelenie miery nezamestnanosti v krajinách EÚ-27 počas sledovaného obdobia. Histogram umožňuje posúdiť, v akom rozsahu sa hodnoty miery nezamestnanosti pohybujú a ktoré hodnoty sa v datasete vyskytujú najčastejšie.
+
+```{r}
+# Histogram rozdelenia miery nezamestnanosti
+ggplot(eu27_data, aes(x = unemp_rate)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "white") +
+  labs(
+    title = "Rozdelenie miery nezamestnanosti v krajinách EÚ-27",
+    x = "Miera nezamestnanosti (%)",
+    y = "Počet pozorovaní"
+  ) +
+  theme_minimal()
+```
+Rozdelenie miery nezamestnanosti je pravostranné, pričom väčšina pozorovaní sa koncentruje približne medzi 3–9 %. Vyššie hodnoty nad 20 % sa vyskytujú menej často a naznačujú výrazné rozdiely v úrovni nezamestnanosti medzi krajinami a sledovanými obdobiami.
+
+## Vzťah medzi ekonomickým rastom a nezamestnanosťou
+
+V súlade s Okunovým zákonom predpokladáme negatívny vzťah medzi ekonomickým rastom a mierou nezamestnanosti. Bodový graf umožňuje preskúmať, či sa tento vzťah prejavuje aj v sledovaných dátach krajín EÚ-27.
+```{r}
+# Bodový graf vzťahu medzi rastom HDP a nezamestnanosťou
+ggplot(eu27_data, aes(x = gdp_growth, y = unemp_rate)) +
+  geom_point(alpha = 0.6, color = "steelblue") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred") +
+  labs(
+    title = "Vzťah medzi rastom HDP a mierou nezamestnanosti",
+    x = "Medziročný rast reálneho HDP (%)",
+    y = "Miera nezamestnanosti (%)"
+  ) +
+  theme_minimal()
+```
+
+Graf naznačuje negatívny vzťah medzi rastom reálneho HDP a mierou nezamestnanosti, čo je v súlade s predpokladmi Okunovho zákona. Výrazný rozptyl pozorovaní okolo regresnej priamky však poukazuje na to, že nezamestnanosť súvisí aj s ďalšími ekonomickými a štrukturálnymi faktormi.
+
+## Časový vývoj miery nezamestnanosti
+
+Priemerný vývoj miery nezamestnanosti v krajinách EÚ-27 umožňuje sledovať spoločné trendy počas sledovaného obdobia. Osobitná pozornosť je venovaná rokom 2020 a 2022, ktoré predstavujú obdobia významných ekonomických zmien.
+
+```{r}
+# Výpočet priemernej miery nezamestnanosti za jednotlivé roky
+nezamestnanost_v_case <- eu27_data %>%
+  group_by(year) %>%
+  summarise(
+    priemerna_nezamestnanost = mean(unemp_rate, na.rm = TRUE)
+  )
+
+# Graf časového vývoja priemernej miery nezamestnanosti
+ggplot(nezamestnanost_v_case,
+       aes(x = year, y = priemerna_nezamestnanost)) +
+  geom_line(color = "steelblue", linewidth = 1) +
+  geom_point(color = "steelblue", size = 2) +
+  geom_vline(
+    xintercept = c(2020, 2022),
+    linetype = "dashed",
+    color = "darkred"
+  ) +
+  scale_x_continuous(breaks = 2010:2024) +
+  labs(
+    title = "Vývoj priemernej miery nezamestnanosti v EÚ-27",
+    x = "Rok",
+    y = "Priemerná miera nezamestnanosti (%)"
+  ) +
+  theme_minimal()
+```
+
+Priemerná miera nezamestnanosti v krajinách EÚ-27 po raste v rokoch 2010–2013 postupne klesala až do roku 2019. V roku 2020 došlo k dočasnému nárastu, po ktorom nasledoval opätovný pokles a stabilizácia na úrovni približne 5,8 % od roku 2022.
+
+## Korelačná štruktúra premenných
+
+Korelačná matica znázorňuje silu a smer lineárnych vzťahov medzi vybranými ekonomickými, demografickými a štrukturálnymi premennými. Umožňuje identifikovať potenciálne súvislosti medzi ukazovateľmi a upozorniť na možné problémy multikolinearity pri modelovaní.
+
+```{r}
+# Výber premenných pre korelačnú analýzu
+korelacne_data <- eu27_data %>%
+  select(
+    unemp_rate,
+    gdp_growth,
+    gdp_growth_lag1,
+    tertiary_edu,
+    investment_gdp,
+    fdi_inflows,
+    inflation,
+    industry_share,
+    old_dependency,
+    activity_rate
+  )
+
+# Výpočet párových korelácií
+korelacie <- cor(
+  korelacne_data,
+  use = "pairwise.complete.obs"
+)
+
+# Prevod korelačnej matice do formátu vhodného pre ggplot2
+korelacie_long <- as.data.frame(as.table(korelacie))
+
+# Vizualizácia korelačnej matice s hodnotami koeficientov
+ggplot(korelacie_long, aes(x = Var1, y = Var2, fill = Freq)) +
+  geom_tile(color = "white") +
+  geom_text(aes(label = sprintf("%.2f", Freq)), size = 3) +
+  scale_fill_gradient2(
+    low = "firebrick",
+    mid = "white",
+    high = "steelblue",
+    midpoint = 0,
+    limits = c(-1, 1)
+  ) +
+  scale_y_discrete(limits = rev(levels(korelacie_long$Var1))) +
+  labs(
+    title = "Korelačná štruktúra vybraných premenných",
+    x = NULL,
+    y = NULL,
+    fill = "Korelácia"
+  ) +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
+```
+
+Korelačná matica naznačuje negatívny vzťah medzi mierou nezamestnanosti a rastom HDP, ako aj medzi nezamestnanosťou a investičnou aktivitou. Pozitívna korelácia sa prejavuje napríklad medzi podielom terciárne vzdelaného obyvateľstva a mierou ekonomickej aktivity. Väčšina ostatných dvojíc premenných vykazuje slabšie lineárne vzťahy.
+
+## Porovnanie vybraných krajín s priemerom EÚ-27
+
+Na základe predchádzajúcich grafov sa zameriavame aj na rozdiely medzi jednotlivými krajinami. Španielsko a Grécko predstavujú zaujímavé prípady vzhľadom na vysokú mieru nezamestnanosti v časti sledovaného obdobia. Ich vývoj porovnáme s priemerom EÚ-27.
+
+```{r}
+# Výpočet priemeru EÚ-27 a výber Španielska, Grécka a Slovenska
+vybrane_krajiny <- eu27_data %>%
+  group_by(year) %>%
+  summarise(
+    priemer_EU27 = mean(unemp_rate, na.rm = TRUE)
+  ) %>%
+  left_join(
+    eu27_data %>%
+      filter(iso2c %in% c("ES", "GR", "SK")) %>%
+      select(iso2c, year, unemp_rate) %>%
+      tidyr::pivot_wider(
+        names_from = iso2c,
+        values_from = unemp_rate
+      ),
+    by = "year"
+  ) %>%
+  tidyr::pivot_longer(
+    cols = c(priemer_EU27, ES, GR, SK),
+    names_to = "krajina",
+    values_to = "nezamestnanost"
+  ) %>%
+  mutate(
+    krajina = recode(
+      krajina,
+      "ES" = "Španielsko",
+      "GR" = "Grécko",
+      "SK" = "Slovensko",
+      "priemer_EU27" = "Priemer EÚ-27"
+    )
+  )
+
+# Graf porovnania miery nezamestnanosti
+ggplot(vybrane_krajiny,
+       aes(x = year, y = nezamestnanost, color = krajina)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  scale_x_continuous(breaks = 2010:2024) +
+  labs(
+    title = "Miera nezamestnanosti: Španielsko, Grécko, Slovensko a priemer EÚ-27",
+    x = "Rok",
+    y = "Miera nezamestnanosti (%)",
+    color = "Krajina"
+  ) +
+  theme_minimal()
+```
+
+Porovnanie vybraných krajín poukazuje na výrazné rozdiely vo vývoji nezamestnanosti. Španielsko a Grécko dosahovali počas väčšiny sledovaného obdobia vyššiu mieru nezamestnanosti než priemer EÚ-27, hoci v oboch krajinách bol zaznamenaný dlhodobý pokles. Slovensko sa v prvej polovici sledovaného obdobia nachádzalo nad priemerom EÚ-27, no od roku 2017 sa k nemu postupne približovalo. V roku 2024 už dosahovalo mieru nezamestnanosti mierne pod úrovňou európskeho priemeru.
+
+## Zhrnutie EDA
+
+Na základe zistení z EDA budú v ďalšej fáze použité aktuálny aj oneskorený rast HDP spolu s ďalšími makroekonomickými, demografickými a štrukturálnymi premennými. Vzhľadom na rozdiely medzi krajinami je vhodné zohľadniť aj ich špecifické charakteristiky. Vzájomné korelácie medzi vysvetľujúcimi premennými bude potrebné sledovať pri odhade modelov, pričom regularizované metódy LASSO a Ridge umožnia posúdiť ich prínos pri predikcii nezamestnanosti.
